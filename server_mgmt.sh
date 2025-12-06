@@ -89,11 +89,33 @@ systemctl is-active --quiet nginx
 EOF
 )
 
+check_user_group=$(cat <<'EOF'
+set -euo pipefail
+user_to_check="sysadmin"
+group_to_check="admin"
+id "$user_to_check" >/dev/null 2>&1
+getent group "$group_to_check" >/dev/null 2>&1
+groups "$user_to_check" | grep -q "\b$group_to_check\b"
+EOF
+)
+
+check_permission=$(cat <<'EOF'
+set -euo pipefail
+user_to_check="sysadmin"
+group_to_check="admin"
+[[ "$(stat -c '%U:%G' /var/www/library)" == "${user_to_check}:${group_to_check}" ]]
+[[ "$(stat -c '%U:%G' /etc/nginx/nginx.conf)" == "${user_to_check}:${group_to_check}" ]]
+[[ "$(stat -c '%U:%G' /etc/nginx/sites-available/library)" == "${user_to_check}:${group_to_check}" ]]
+EOF
+)
+
 execute_check "[00-system-update.sh] APT cache" check_update
 execute_check "[01-install-deps.sh] Packages" check_packages
 execute_check "[02-serversetup.sh] Firewall + PHP" check_firewall
 execute_check "[02-serversetup.sh] Library directory" check_library
 execute_check "[03-webserversetup.sh] Nginx site" check_nginx
+execute_check "[04-usercreation.sh] User & Group" check_user_group
+execute_check "[05-permissionsetup.sh] Permissions" check_permission
 
 summary="$(printf "%s\n" "${results[@]}")"
 if [[ $failed -eq 0 ]]; then
