@@ -95,7 +95,7 @@ user_to_check="sysadmin"
 group_to_check="admin"
 id "$user_to_check" >/dev/null 2>&1
 getent group "$group_to_check" >/dev/null 2>&1
-groups "$user_to_check" | grep -q "\b$group_to_check\b"
+groups "$user_to_check" | grep -qE "\b$group_to_check\b"
 EOF
 )
 
