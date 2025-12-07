@@ -36,7 +36,8 @@ else
 fi
 
 # add user to group if not in it
-if ! groups "$user_to_create" | grep -q "$user_group"; then
+# admin should match the whole word
+if ! groups "$user_to_create" | grep -q "\b$user_group\b"; then
     usermod -aG "$user_group" "$user_to_create"
     echo "User $user_to_create added to group $user_group."
 else
