@@ -12,6 +12,9 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
+# handle ctrl c
+trap 'echo "Ctrl-C pressed. Exiting..."; exit 1' SIGINT
+
 # create a user
 echo "Creating user..."
 

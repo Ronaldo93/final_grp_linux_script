@@ -23,6 +23,9 @@ exec() {
   fi
 }
 
+# handle ctrl c
+trap 'echo "Ctrl-C pressed. Exiting..."; exit 1' SIGINT
+
 # set permissions for library directory and nginx config
 user_to_set="sysadmin"
 group_to_set="admin"

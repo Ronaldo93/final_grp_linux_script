@@ -19,11 +19,14 @@ fi
 # require root privileges for checking system configuration
 if [[ $EUID -ne 0 ]]; then
 	cat <<'EOF' >&2
-server_mgmt.sh inspects the host configuration and therefore must run with root privileges.
-Invoke it with sudo (sudo ./server_mgmt.sh) or run it as root before checking again.
+server_validation.sh inspects the host configuration and therefore must run with root privileges.
+Invoke it with sudo (sudo ./server_validation.sh) or run it as root before checking again.
 EOF
 	exit 1
 fi
+
+# handle ctrl c
+trap 'echo "Ctrl-C pressed. Exiting..."; exit 1' SIGINT
 
 results=()
 failed=0
@@ -109,6 +112,37 @@ group_to_check="admin"
 EOF
 )
 
+check_website_config=$(cat <<'EOF'
+set -euo pipefail
+config_file="/etc/nginx/sites-available/library"
+[[ -f "$config_file" ]] || exit 1
+# Verify listening on port 80
+grep -qE "^\s*listen\s+80" "$config_file" || exit 1
+# Verify root path is correct
+grep -qE "^\s*root\s+/var/www/library" "$config_file" || exit 1
+# Verify index includes index.php
+grep -qE "^\s*index.*index\.php" "$config_file" || exit 1
+# Verify PHP handling is configured
+grep -qE "location.*\.php" "$config_file" || exit 1
+grep -q "fastcgi_pass" "$config_file" || exit 1
+# Verify website responds (basic connectivity test)
+curl -s -o /dev/null -w "%{http_code}" http://localhost | grep -qE "^(200|301|302)$"
+EOF
+)
+
+check_database=$(cat <<'EOF'
+set -euo pipefail
+# Check MySQL service is running
+systemctl is-active --quiet mysql || systemctl is-active --quiet mariadb || exit 1
+# Check MySQL can accept connections
+mysqladmin ping -u root --silent >/dev/null 2>&1 || mysqladmin ping --silent >/dev/null 2>&1 || exit 1
+# Check MySQL is listening on default port
+ss -tlnp | grep -q ":3306" || exit 1
+# Check library database exists (optional - won't fail if DB doesn't exist yet)
+# mysql -u root -e "USE library" >/dev/null 2>&1 || true
+EOF
+)
+
 execute_check "[00-system-update.sh] APT cache" check_update
 execute_check "[01-install-deps.sh] Packages" check_packages
 execute_check "[02-serversetup.sh] Firewall + PHP" check_firewall
@@ -116,6 +150,8 @@ execute_check "[02-serversetup.sh] Library directory" check_library
 execute_check "[03-webserversetup.sh] Nginx site" check_nginx
 execute_check "[04-usercreation.sh] User & Group" check_user_group
 execute_check "[05-permissionsetup.sh] Permissions" check_permission
+execute_check "[03-webserversetup.sh] Website config" check_website_config
+execute_check "[Database] MySQL service" check_database
 
 summary="$(printf "%s\n" "${results[@]}")"
 if [[ $failed -eq 0 ]]; then

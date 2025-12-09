@@ -21,6 +21,9 @@ exec() {
   fi
 }
 
+# handle ctrl c
+trap 'echo "Ctrl-C pressed. Exiting..."; exit 1' SIGINT
+
 # install system tools
 exec sudo apt install -y openssh-server ufw build-essential curl wget git tar gzip zip unzip rsync cron
 

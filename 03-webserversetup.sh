@@ -23,6 +23,10 @@ exec() {
     "$@"
   fi
 }
+
+# handle ctrl c
+trap 'echo "Ctrl-C pressed. Exiting..."; exit 1' SIGINT
+
 # TODO: check if the user already configured the website
 is_configured="0"
 if [[ -f /etc/nginx/sites-enabled/library ]]; then
@@ -42,7 +46,7 @@ if [[ $is_configured == "1" && $dry == "0" ]]; then
 fi
 
 dir=/etc/nginx/sites-available/library
-default_dir_to_remove=/etc/nginx/sites-available/library
+default_dir_to_remove=/etc/nginx/sites-available/default
 content=$(cat library)
 
 echo "Preview of content to be written in $dir:"
