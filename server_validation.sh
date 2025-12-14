@@ -16,15 +16,6 @@ EOF
 	exit 1
 fi
 
-# require root privileges for checking system configuration
-if [[ $EUID -ne 0 ]]; then
-	cat <<'EOF' >&2
-server_validation.sh inspects the host configuration and therefore must run with root privileges.
-Invoke it with sudo (sudo ./server_validation.sh) or run it as root before checking again.
-EOF
-	exit 1
-fi
-
 # handle ctrl c
 trap 'echo "Ctrl-C pressed. Exiting..."; exit 1' SIGINT
 
@@ -67,7 +58,7 @@ EOF
 
 check_firewall=$(cat <<'EOF'
 set -euo pipefail
-status=$(ufw status)
+status=$(sudo ufw status)
 printf '%s' "$status" | grep -q "Status: active"
 printf '%s' "$status" | grep -q "OpenSSH"
 printf '%s' "$status" | grep -q "Nginx Full"
@@ -87,8 +78,8 @@ set -euo pipefail
 [[ -f /etc/nginx/sites-available/library ]] || exit 1
 [[ -L /etc/nginx/sites-enabled/library ]] || exit 1
 [[ "$(readlink -f /etc/nginx/sites-enabled/library)" == "/etc/nginx/sites-available/library" ]] || exit 1
-nginx -t >/dev/null
-systemctl is-active --quiet nginx
+sudo nginx -t >/dev/null
+sudo systemctl is-active --quiet nginx
 EOF
 )
 
@@ -133,13 +124,13 @@ EOF
 check_database=$(cat <<'EOF'
 set -euo pipefail
 # Check MySQL service is running
-systemctl is-active --quiet mysql || systemctl is-active --quiet mariadb || exit 1
+sudo systemctl is-active --quiet mysql || sudo systemctl is-active --quiet mariadb || exit 1
 # Check MySQL can accept connections
-mysqladmin ping -u root --silent >/dev/null 2>&1 || mysqladmin ping --silent >/dev/null 2>&1 || exit 1
+sudo mysqladmin ping -u root --silent >/dev/null 2>&1 || sudo mysqladmin ping --silent >/dev/null 2>&1 || exit 1
 # Check MySQL is listening on default port
-ss -tlnp | grep -q ":3306" || exit 1
+sudo ss -tlnp | grep -q ":3306" || exit 1
 # Check library database exists (optional - won't fail if DB doesn't exist yet)
-# mysql -u root -e "USE library" >/dev/null 2>&1 || true
+# sudo mysql -u root -e "USE library" >/dev/null 2>&1 || true
 EOF
 )
 

@@ -27,6 +27,8 @@ exec() {
 # handle ctrl c
 trap 'echo "Ctrl-C pressed. Exiting..."; exit 1' SIGINT
 
+echo "[INFO] Starting web server configuration..."
+
 # TODO: check if the user already configured the website
 is_configured="0"
 if [[ -f /etc/nginx/sites-enabled/library ]]; then
@@ -35,12 +37,12 @@ fi
 
 # todo remove this one line
 if [[ $is_configured == "1" && $dry == "0" ]]; then
-  echo "The website is already configured. Do you want to overwrite the configuration? (y/n)"
+  echo "[WARNING] The website is already configured. Do you want to overwrite the configuration? (y/n)"
   read answer
   if [[ $answer == "y" ]]; then
-    echo "Overwriting configuration..."
+    echo "[INFO] Overwriting configuration..."
   else
-    echo "Configuration not overwritten."
+    echo "[INFO] Configuration not overwritten."
     exit 0
   fi
 fi
@@ -49,19 +51,20 @@ dir=/etc/nginx/sites-available/library
 default_dir_to_remove=/etc/nginx/sites-available/default
 content=$(cat library)
 
-echo "Preview of content to be written in $dir:"
+echo "[INFO] Preview of content to be written in $dir:"
 echo "----------------------------------------"
 echo "$content"
+echo "----------------------------------------"
 
 # ask if user wants to actually apply the configuration (only when not in dry run)
 if [[ $dry == "0" ]]; then
-  echo "Do you want to write the configuration to $dir? (y/n)"
+  echo "[PROMPT] Do you want to write the configuration to $dir? (y/n)"
   read answer
 
   if [[ $answer == "y" ]]; then
-    exec echo "Writing configuration to $dir..."
+    echo "[INFO] Writing configuration to $dir..."
   else
-    echo "Configuration not written."
+    echo "[INFO] Configuration not written."
     exit 0
   fi
 else
@@ -71,37 +74,38 @@ fi
 
 # write the configuration to the file (even if the file already exists as user chose to opt in)
 exec sudo tee $dir >/dev/null <<<"$content"
-echo "Configuration written successfully."
+echo "[INFO] Configuration written successfully."
 
 if [[ -f /etc/nginx/sites-enabled/default ]]; then
-  echo "removing default configuration..."
+  echo "[INFO] Removing default nginx configuration..."
   exec sudo rm /etc/nginx/sites-enabled/default
 else
-  echo "Default configuration already removed."
+  echo "[INFO] Default configuration already removed."
 fi
 
 # also remove the sites available if it exists
 if [[ -f $default_dir_to_remove ]]; then
-  echo "removing $default_dir_to_remove..."
+  echo "[INFO] Removing $default_dir_to_remove..."
   exec sudo rm $default_dir_to_remove
 else
-  echo "$default_dir_to_remove already removed."
+  echo "[INFO] $default_dir_to_remove already removed."
 fi
 
 # enable the configuration if not exist
 if [[ ! -f /etc/nginx/sites-enabled/library ]]; then
-  echo "enabling library system"
+  echo "[INFO] Enabling library site configuration..."
   exec sudo ln -s $dir /etc/nginx/sites-enabled/
 else
-  echo "Configuration already enabled."
+  echo "[INFO] Configuration already enabled."
 fi
 
 # test the configuration
-echo "Testing configuration..."
+echo "[INFO] Testing nginx configuration..."
 exec sudo nginx -t
-echo "Configuration tested successfully."
+echo "[INFO] Configuration tested successfully."
 
 # restart nginx
-echo "Restarting nginx..."
+echo "[INFO] Restarting nginx..."
 exec sudo systemctl restart nginx
-echo "Nginx restarted successfully."
+echo "[INFO] Nginx restarted successfully."
+echo "[INFO] Web server configuration completed successfully."

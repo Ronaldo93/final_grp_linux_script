@@ -26,6 +26,8 @@ exec() {
 # handle ctrl c
 trap 'echo "Ctrl-C pressed. Exiting..."; exit 1' SIGINT
 
+echo "[INFO] Starting permission setup..."
+
 # set permissions for library directory and nginx config
 user_to_set="sysadmin"
 group_to_set="admin"
@@ -39,6 +41,11 @@ library_dir_to_update="/var/www/library"
 
 
 # update permission on those dir and file
+echo "[INFO] Updating ownership for library directory..."
 exec sudo chown -R $user_to_set:$group_to_set $library_dir_to_update
+echo "[INFO] Updating ownership for nginx configuration file..."
 exec sudo chown -R $user_to_set:$group_to_set $nginx_file_to_update
+echo "[INFO] Updating ownership for library site configuration..."
 exec sudo chown -R $user_to_set:$group_to_set $library_site_to_update
+
+echo "[INFO] Permission setup completed successfully."
