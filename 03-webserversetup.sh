@@ -1,4 +1,7 @@
+#!/bin/bash
 # for creating the website we need to create the configuration file and enable it via symlink.
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # have a preview for the configuration
 # check if there is dry argument
@@ -49,7 +52,7 @@ fi
 
 dir=/etc/nginx/sites-available/library
 default_dir_to_remove=/etc/nginx/sites-available/default
-content=$(cat library)
+content=$(cat "$SCRIPT_DIR/library")
 
 echo "[INFO] Preview of content to be written in $dir:"
 echo "----------------------------------------"

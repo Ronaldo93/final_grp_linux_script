@@ -1,3 +1,4 @@
+#!/bin/bash
 # NOTE: you will not run this script until you have already done all of the previous steps
 
 # check if there is dry argument
@@ -106,4 +107,3 @@ echo "[INFO] MySQL user and privileges configured successfully."
 echo "[INFO] Server setup completed successfully."
 
 # TODO: validate status of the php page via central management script later
-

@@ -76,65 +76,13 @@ check_status() {
     gum style --foreground 45 --bold "Installation Status"
     echo ""
 
-    # Check nginx
-    if command -v nginx >/dev/null 2>&1; then
-        if systemctl is-active --quiet nginx; then
-            gum style --foreground 82 "✓ Nginx: installed and running"
-        else
-            gum style --foreground 214 "○ Nginx: installed but not running"
-        fi
+    # Run the server validation script
+    if [[ -f "$SCRIPT_DIR/server_validation.sh" ]]; then
+        bash "$SCRIPT_DIR/server_validation.sh"
     else
-        gum style --foreground 196 "✗ Nginx: not installed"
+        gum style --foreground 196 "Error: server_validation.sh not found"
     fi
 
-    # Check MySQL
-    if command -v mysql >/dev/null 2>&1; then
-        if systemctl is-active --quiet mysql; then
-            gum style --foreground 82 "✓ MySQL: installed and running"
-        else
-            gum style --foreground 214 "○ MySQL: installed but not running"
-        fi
-    else
-        gum style --foreground 196 "✗ MySQL: not installed"
-    fi
-
-    # Check PHP
-    if command -v php >/dev/null 2>&1; then
-        php_version=$(php -v | head -n1 | cut -d' ' -f2)
-        gum style --foreground 82 "✓ PHP: installed (v$php_version)"
-    else
-        gum style --foreground 196 "✗ PHP: not installed"
-    fi
-
-    # Check PHP-FPM
-    if systemctl is-active --quiet php*-fpm 2>/dev/null; then
-        gum style --foreground 82 "✓ PHP-FPM: running"
-    else
-        gum style --foreground 214 "○ PHP-FPM: not running"
-    fi
-
-    # Check library directory
-    if [[ -d /var/www/library ]]; then
-        gum style --foreground 82 "✓ Library directory: exists"
-    else
-        gum style --foreground 196 "✗ Library directory: not found"
-    fi
-
-    # Check nginx site config
-    if [[ -f /etc/nginx/sites-enabled/library ]]; then
-        gum style --foreground 82 "✓ Nginx site config: enabled"
-    else
-        gum style --foreground 196 "✗ Nginx site config: not enabled"
-    fi
-
-    echo ""
-    
-    if gum confirm "Open a shell to inspect the server?"; then
-        gum style --foreground 240 "Type 'exit' to return to this menu."
-        echo ""
-        bash
-    fi
-    
     pause
 }
 

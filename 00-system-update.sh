@@ -1,3 +1,4 @@
+#!/bin/bash
 # handle ctrl c
 trap 'echo "Ctrl-C pressed. Exiting..."; exit 1' SIGINT
 

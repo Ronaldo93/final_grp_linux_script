@@ -1,3 +1,4 @@
+#!/bin/bash
 # check if there is dry argument
 dry="0"
 
