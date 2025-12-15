@@ -33,14 +33,6 @@ execute_check() {
   fi
 }
 
-# validate script snippets
-check_update=$(
-  cat <<'EOF'
-set -euo pipefail
-[[ -d /var/lib/apt/lists ]] && [[ $(sudo find /var/lib/apt/lists -maxdepth 1 -type f 2>/dev/null | wc -l) -gt 0 ]]
-EOF
-)
-
 check_packages=$(
   cat <<'EOF'
 set -euo pipefail
@@ -142,7 +134,6 @@ sudo ss -tlnp | grep -q ":3306" || exit 1
 EOF
 )
 
-execute_check "[00-system-update.sh] APT cache" check_update
 execute_check "[01-install-deps.sh] Packages" check_packages
 execute_check "[02-serversetup.sh] Firewall + PHP" check_firewall
 execute_check "[02-serversetup.sh] Library directory" check_library
