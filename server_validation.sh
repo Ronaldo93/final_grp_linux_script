@@ -37,7 +37,7 @@ execute_check() {
 check_update=$(
   cat <<'EOF'
 set -euo pipefail
-[[ -d /var/lib/apt/lists ]] && [[ $(find /var/lib/apt/lists -maxdepth 1 -type f 2>/dev/null | wc -l) -gt 0 ]]
+[[ -d /var/lib/apt/lists ]] && [[ $(sudo find /var/lib/apt/lists -maxdepth 1 -type f 2>/dev/null | wc -l) -gt 0 ]]
 EOF
 )
 
@@ -47,7 +47,7 @@ set -euo pipefail
 packages=(openssh-server ufw build-essential curl wget git tar gzip zip unzip rsync cron nginx mysql-server mysql-client php php-fpm php-mysql php-xml php-mbstring php-curl php-zip php-gd php-cli)
 missing=()
 for pkg in "${packages[@]}"; do
-	if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+	if ! sudo dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
 		missing+=("$pkg")
 	fi
 done
@@ -71,18 +71,17 @@ EOF
 check_library=$(
   cat <<'EOF'
 set -euo pipefail
-[[ -d /var/www/library ]] || exit 1
-[[ -f /var/www/library/info.php ]] || exit 1
-grep -q "phpinfo" /var/www/library/info.php
+sudo test -d /var/www/library || exit 1
+sudo test -f /var/www/library/index.php || exit 1
 EOF
 )
 
 check_nginx=$(
   cat <<'EOF'
 set -euo pipefail
-[[ -f /etc/nginx/sites-available/library ]] || exit 1
-[[ -L /etc/nginx/sites-enabled/library ]] || exit 1
-[[ "$(readlink -f /etc/nginx/sites-enabled/library)" == "/etc/nginx/sites-available/library" ]] || exit 1
+sudo test -f /etc/nginx/sites-available/library || exit 1
+sudo test -L /etc/nginx/sites-enabled/library || exit 1
+[[ "$(sudo readlink -f /etc/nginx/sites-enabled/library)" == "/etc/nginx/sites-available/library" ]] || exit 1
 sudo nginx -t >/dev/null
 sudo systemctl is-active --quiet nginx
 EOF
@@ -93,9 +92,9 @@ check_user_group=$(
 set -euo pipefail
 user_to_check="sysadmin"
 group_to_check="admin"
-id "$user_to_check" >/dev/null 2>&1
-getent group "$group_to_check" >/dev/null 2>&1
-groups "$user_to_check" | grep -qE "\b$group_to_check\b"
+sudo id "$user_to_check" >/dev/null 2>&1
+sudo getent group "$group_to_check" >/dev/null 2>&1
+sudo groups "$user_to_check" | grep -qE "\b$group_to_check\b"
 EOF
 )
 
@@ -104,9 +103,9 @@ check_permission=$(
 set -euo pipefail
 user_to_check="sysadmin"
 group_to_check="admin"
-[[ "$(stat -c '%U:%G' /var/www/library)" == "${user_to_check}:${group_to_check}" ]]
-[[ "$(stat -c '%U:%G' /etc/nginx/nginx.conf)" == "${user_to_check}:${group_to_check}" ]]
-[[ "$(stat -c '%U:%G' /etc/nginx/sites-available/library)" == "${user_to_check}:${group_to_check}" ]]
+[[ "$(sudo stat -c '%U:%G' /var/www/library)" == "${user_to_check}:${group_to_check}" ]]
+[[ "$(sudo stat -c '%U:%G' /etc/nginx/nginx.conf)" == "${user_to_check}:${group_to_check}" ]]
+[[ "$(sudo stat -c '%U:%G' /etc/nginx/sites-available/library)" == "${user_to_check}:${group_to_check}" ]]
 EOF
 )
 
@@ -114,16 +113,16 @@ check_website_config=$(
   cat <<'EOF'
 set -euo pipefail
 config_file="/etc/nginx/sites-available/library"
-[[ -f "$config_file" ]] || exit 1
+sudo test -f "$config_file" || exit 1
 # Verify listening on port 80
-grep -qE "^\s*listen\s+80" "$config_file" || exit 1
+sudo grep -qE "^\s*listen\s+80" "$config_file" || exit 1
 # Verify root path is correct
-grep -qE "^\s*root\s+/var/www/library" "$config_file" || exit 1
+sudo grep -qE "^\s*root\s+/var/www/library" "$config_file" || exit 1
 # Verify index includes index.php
-grep -qE "^\s*index.*index\.php" "$config_file" || exit 1
+sudo grep -qE "^\s*index.*index\.php" "$config_file" || exit 1
 # Verify PHP handling is configured
-grep -qE "location.*\.php" "$config_file" || exit 1
-grep -q "fastcgi_pass" "$config_file" || exit 1
+sudo grep -qE "location.*\.php" "$config_file" || exit 1
+sudo grep -q "fastcgi_pass" "$config_file" || exit 1
 # Verify website responds (basic connectivity test)
 curl -s -o /dev/null -w "%{http_code}" http://localhost | grep -qE "^(200|301|302)$"
 EOF
