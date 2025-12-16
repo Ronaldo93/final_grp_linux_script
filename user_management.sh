@@ -25,7 +25,7 @@ EOF
 
 # function to add user to admin group
 add_user_to_admin() {
-    user=$(gum input --placeholder "Enter the username")
+    user=$(gum input --placeholder "Username to add to admin group")
     [[ -z $user ]] && return
 
     if ! id "$user" &>/dev/null; then
@@ -45,7 +45,7 @@ add_user_to_admin() {
 
 # function to remove user from admin group
 remove_user_from_admin() {
-    user=$(gum input --placeholder "Enter the username")
+    user=$(gum input --placeholder "Username to remove from admin group")
     [[ -z $user ]] && return
 
     if ! id "$user" &>/dev/null; then
