@@ -13,6 +13,9 @@ EOF
 	exit 1
 fi
 
+# prompt for sudo password upfront
+sudo -v || { echo "sudo authentication failed"; exit 1; }
+
 # function to show welcome banner
 show_banner() {
     clear

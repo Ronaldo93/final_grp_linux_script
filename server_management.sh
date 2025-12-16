@@ -16,6 +16,9 @@ EOF
     exit 1
 fi
 
+# prompt for sudo password upfront
+sudo -v || { echo "sudo authentication failed"; exit 1; }
+
 pause() {
     gum style --foreground 240 "Press Enter to continue..." && read -rs
 }
@@ -89,11 +92,12 @@ check_status() {
 remove_server() {
     gum style --foreground 196 --bold "⚠ Remove Server"
     echo ""
-    gum style --foreground 214 "This will remove:"
-    gum style --foreground 240 "  - Nginx and its configuration"
-    gum style --foreground 240 "  - MySQL server and all databases"
-    gum style --foreground 240 "  - PHP and related packages"
-    gum style --foreground 240 "  - /var/www/library directory"
+    gum style --foreground 214 "This will:"
+    gum style --foreground 240 "  - Stop and disable nginx, mysql, php-fpm services"
+    gum style --foreground 240 "  - Remove nginx configuration"
+    gum style --foreground 240 "  - Remove MySQL data"
+    gum style --foreground 240 "  - Remove /var/www/library directory"
+    gum style --foreground 240 "  - Remove sysadmin user and admin group"
     echo ""
 
     if ! gum confirm --negative "Cancel" "Are you sure you want to remove the server?"; then
@@ -111,11 +115,14 @@ remove_server() {
     gum style --foreground 214 "Removing server components..."
     echo ""
 
-    # Stop services
-    gum style --foreground 240 "Stopping services..."
+    # Stop and disable services
+    gum style --foreground 240 "Stopping and disabling services..."
     sudo systemctl stop nginx 2>/dev/null
+    sudo systemctl disable nginx 2>/dev/null
     sudo systemctl stop mysql 2>/dev/null
+    sudo systemctl disable mysql 2>/dev/null
     sudo systemctl stop php*-fpm 2>/dev/null
+    sudo systemctl disable php*-fpm 2>/dev/null
 
     # Remove nginx config
     gum style --foreground 240 "Removing nginx configuration..."
@@ -126,15 +133,22 @@ remove_server() {
     gum style --foreground 240 "Removing library directory..."
     sudo rm -rf /var/www/library
 
-    # Remove packages
-    gum style --foreground 240 "Removing packages..."
-    sudo apt purge -y nginx nginx-common mysql-server mysql-client \
-        php php-fpm php-mysql php-xml php-mbstring php-curl php-zip php-gd php-cli 2>/dev/null
-    sudo apt autoremove -y
-
     # Clean up MySQL data
     gum style --foreground 240 "Removing MySQL data..."
     sudo rm -rf /var/lib/mysql
+
+    # Remove sysadmin user and admin group
+    gum style --foreground 240 "Removing sysadmin user..."
+    if id "sysadmin" &>/dev/null; then
+        sudo userdel -r sysadmin 2>/dev/null
+        gum style --foreground 82 "User sysadmin removed."
+    fi
+
+    gum style --foreground 240 "Removing admin group..."
+    if getent group admin &>/dev/null; then
+        sudo groupdel admin 2>/dev/null
+        gum style --foreground 82 "Group admin removed."
+    fi
 
     gum style --foreground 82 --bold "Server removed successfully."
     pause
