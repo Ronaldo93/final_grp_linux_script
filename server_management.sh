@@ -94,6 +94,7 @@ remove_server() {
     echo ""
     gum style --foreground 214 "This will:"
     gum style --foreground 240 "  - Stop and disable nginx, mysql, php-fpm services"
+    gum style --foreground 240 "  - Disable UFW firewall"
     gum style --foreground 240 "  - Remove nginx configuration"
     gum style --foreground 240 "  - Remove MySQL data"
     gum style --foreground 240 "  - Remove /var/www/library directory"
@@ -123,6 +124,10 @@ remove_server() {
     sudo systemctl disable mysql 2>/dev/null
     sudo systemctl stop php*-fpm 2>/dev/null
     sudo systemctl disable php*-fpm 2>/dev/null
+
+    # Disable UFW firewall
+    gum style --foreground 240 "Disabling UFW firewall..."
+    sudo ufw disable 2>/dev/null
 
     # Remove nginx config
     gum style --foreground 240 "Removing nginx configuration..."

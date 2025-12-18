@@ -19,6 +19,9 @@ fi
 # handle ctrl c
 trap 'echo "Ctrl-C pressed. Exiting..."; exit 1' SIGINT
 
+# Prime sudo credentials before running spinners to avoid password prompt overlap
+sudo -v || { echo "sudo authentication failed"; exit 1; }
+
 results=()
 failed=0
 
