@@ -96,7 +96,7 @@ remove_server() {
     gum style --foreground 240 "  - Stop and disable nginx, mysql, php-fpm services"
     gum style --foreground 240 "  - Disable UFW firewall"
     gum style --foreground 240 "  - Remove nginx configuration"
-    gum style --foreground 240 "  - Remove MySQL data"
+    gum style --foreground 240 "  - Drop MySQL database (library_db) and user (lib_admin)"
     gum style --foreground 240 "  - Remove /var/www/library directory"
     gum style --foreground 240 "  - Remove sysadmin user and admin group"
     echo ""
@@ -138,9 +138,10 @@ remove_server() {
     gum style --foreground 240 "Removing library directory..."
     sudo rm -rf /var/www/library
 
-    # Clean up MySQL data
-    gum style --foreground 240 "Removing MySQL data..."
-    sudo rm -rf /var/lib/mysql
+    # Clean up MySQL database and user
+    gum style --foreground 240 "Removing MySQL database and user..."
+    sudo mysql -u root -e "DROP DATABASE IF EXISTS library_db;" 2>/dev/null
+    sudo mysql -u root -e "DROP USER IF EXISTS 'lib_admin'@'localhost';" 2>/dev/null
 
     # Remove sysadmin user and admin group
     gum style --foreground 240 "Removing sysadmin user..."

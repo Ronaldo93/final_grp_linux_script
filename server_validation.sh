@@ -77,7 +77,7 @@ set -euo pipefail
 sudo test -f /etc/nginx/sites-available/library || exit 1
 sudo test -L /etc/nginx/sites-enabled/library || exit 1
 [[ "$(sudo readlink -f /etc/nginx/sites-enabled/library)" == "/etc/nginx/sites-available/library" ]] || exit 1
-sudo nginx -t >/dev/null
+sudo nginx -t >/dev/null 2>&1
 sudo systemctl is-active --quiet nginx
 EOF
 )
