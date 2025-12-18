@@ -16,6 +16,8 @@ log_warning() { gum style --foreground 214 "[WARN] $1"; }
 log_error()   { gum style --foreground 196 "[ERROR] $1"; }
 log_step()    { gum style --foreground 141 ">> $1"; }
 
+pause() { gum style --foreground 240 "Press Enter to continue..." && read -rs; }
+
 # Cleanup on failure
 cleanup_failed_backup() {
     local file="$1"
@@ -83,13 +85,13 @@ perform_backup() {
     echo ""
     log_info "Config: DB=$db_name, Dir=$backup_dir, User=$mysql_user@$mysql_host"
     
-    gum confirm "Proceed with backup?" || { log_warning "Cancelled."; read -rs; return; }
+    gum confirm "Proceed with backup?" || { log_warning "Cancelled."; pause; return; }
 
     # Create backup directory
     log_step "Creating backup directory..."
     if ! sudo mkdir -p "$backup_dir"; then
         log_error "Failed to create: $backup_dir"
-        read -rs; return 1
+        pause; return 1
     fi
     sudo chmod 750 "$backup_dir"
 
@@ -102,25 +104,25 @@ perform_backup() {
     if ! sudo mysql -u "$mysql_user" -h "$mysql_host" -e "USE $db_name" 2>/dev/null; then
         log_error "Database '$db_name' not found!"
         CURRENT_BACKUP_FILE=""
-        read -rs; return 1
+        pause; return 1
     fi
 
     # Perform backup
     log_step "Dumping database: $db_name..."
-    if sudo bash -c "mysqldump -u '$mysql_user' -h '$mysql_host' '$db_name' > '$BACKUP_FILE'" 2>&1; then
-        if [[ ! -s "$BACKUP_FILE" ]]; then
+    if sudo bash -c "mysqldump -u '$mysql_user' -h '$mysql_host' '$db_name' > '$BACKUP_FILE' 2>&1"; then
+        if ! sudo test -s "$BACKUP_FILE"; then
             log_error "Backup file is empty!"
             cleanup_failed_backup "$BACKUP_FILE"
             CURRENT_BACKUP_FILE=""
-            read -rs; return 1
+            pause; return 1
         fi
 
-        log_success "Dump complete: $(du -h "$BACKUP_FILE" | cut -f1)"
+        log_success "Dump complete: $(sudo du -h "$BACKUP_FILE" | cut -f1)"
 
         log_step "Compressing..."
-        if gzip "$BACKUP_FILE"; then
+        if sudo gzip "$BACKUP_FILE"; then
             sudo chmod 640 "${BACKUP_FILE}.gz"
-            log_success "Compressed: ${BACKUP_FILE}.gz ($(du -h "${BACKUP_FILE}.gz" | cut -f1))"
+            log_success "Compressed: ${BACKUP_FILE}.gz ($(sudo du -h "${BACKUP_FILE}.gz" | cut -f1))"
         else
             log_warning "Compression failed, keeping uncompressed."
             sudo chmod 640 "$BACKUP_FILE"
@@ -135,7 +137,7 @@ perform_backup() {
         CURRENT_BACKUP_FILE=""
     fi
 
-    gum style --foreground 240 "Press Enter to continue..." && read -rs
+    pause
 }
 
 restore_backup() {
@@ -149,38 +151,38 @@ restore_backup() {
 
     if [[ ! -d "$backup_dir" ]]; then
         log_error "Directory not found: $backup_dir"
-        read -rs; return 1
+        pause; return 1
     fi
 
     # Find backup files and let user select
     log_info "Scanning $backup_dir for backups..."
-    mapfile -t backup_files < <(find "$backup_dir" -maxdepth 1 -type f \( -name "*.sql" -o -name "*.sql.gz" \) 2>/dev/null | sort -r)
+    mapfile -t backup_files < <(sudo find "$backup_dir" -maxdepth 1 -type f \( -name "*.sql" -o -name "*.sql.gz" \) 2>/dev/null | sort -r)
 
     if [[ ${#backup_files[@]} -eq 0 ]]; then
         log_warning "No backup files found in $backup_dir"
-        read -rs; return
+        pause; return
     fi
 
     # Build selection list with file info
     local file_options=()
     for f in "${backup_files[@]}"; do
         local fname=$(basename "$f")
-        local fsize=$(du -h "$f" 2>/dev/null | cut -f1)
-        local fdate=$(stat -c '%y' "$f" 2>/dev/null | cut -d'.' -f1)
+        local fsize=$(sudo du -h "$f" 2>/dev/null | cut -f1)
+        local fdate=$(sudo stat -c '%y' "$f" 2>/dev/null | cut -d'.' -f1)
         file_options+=("$fname ($fsize, $fdate)")
     done
 
     log_step "Select a backup file:"
     selected=$(printf '%s\n' "${file_options[@]}" | gum choose)
-    [[ -z "$selected" ]] && { log_warning "No file selected."; read -rs; return; }
+    [[ -z "$selected" ]] && { log_warning "No file selected."; pause; return; }
 
     # Extract filename from selection
     selected_name=$(echo "$selected" | sed 's/ (.*//')
     backup_file="$backup_dir/$selected_name"
 
-    if [[ ! -f "$backup_file" ]]; then
+    if ! sudo test -f "$backup_file"; then
         log_error "File not found: $backup_file"
-        read -rs; return 1
+        pause; return 1
     fi
     log_info "Selected: $backup_file"
 
@@ -195,13 +197,13 @@ restore_backup() {
 
     echo ""
     log_warning "This will OVERWRITE data in '$db_name'!"
-    gum confirm --negative "Cancel" "Proceed with restore?" || { log_warning "Cancelled."; read -rs; return; }
+    gum confirm --negative "Cancel" "Proceed with restore?" || { log_warning "Cancelled."; pause; return; }
 
     # Ensure database exists
     log_step "Preparing database..."
     if ! sudo mysql -u "$mysql_user" -h "$mysql_host" -e "CREATE DATABASE IF NOT EXISTS \`$db_name\`;" 2>&1; then
         log_error "Failed to create database '$db_name'"
-        read -rs; return 1
+        pause; return 1
     fi
 
     # Decompress if needed
@@ -210,11 +212,11 @@ restore_backup() {
         temp_file="/tmp/restore_${db_name}_$$.sql"
         CURRENT_TEMP_FILE="$temp_file"
         
-        if ! gunzip -c "$backup_file" > "$temp_file"; then
+        if ! sudo gunzip -c "$backup_file" > "$temp_file"; then
             log_error "Decompression failed!"
             cleanup_failed_restore "$temp_file"
             CURRENT_TEMP_FILE=""
-            read -rs; return 1
+            pause; return 1
         fi
         backup_file="$temp_file"
     fi
@@ -232,7 +234,7 @@ restore_backup() {
     [[ -n "$temp_file" && -f "$temp_file" ]] && rm -f "$temp_file"
     CURRENT_TEMP_FILE=""
 
-    gum style --foreground 240 "Press Enter to continue..." && read -rs
+    pause
 }
 
 list_backups() {
@@ -242,14 +244,14 @@ list_backups() {
     [[ -z "$backup_dir" ]] && backup_dir="$DEFAULT_BACKUP_DIR"
 
     echo ""
-    if [[ ! -d "$backup_dir" ]]; then
+    if ! sudo test -d "$backup_dir"; then
         log_warning "Directory not found: $backup_dir"
     else
         log_info "Backups in $backup_dir:"
-        ls -lah "$backup_dir"/*.sql* 2>/dev/null || echo "  (none)"
+        sudo bash -c "ls -lah '$backup_dir'/*.sql* 2>/dev/null" || echo "  (none)"
     fi
 
-    gum style --foreground 240 "Press Enter to continue..." && read -rs
+    pause
 }
 
 # Main loop
