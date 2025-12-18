@@ -107,7 +107,7 @@ perform_backup() {
 
     # Perform backup
     log_step "Dumping database: $db_name..."
-    if sudo mysqldump -u "$mysql_user" -h "$mysql_host" "$db_name" > "$BACKUP_FILE" 2>&1; then
+    if sudo bash -c "mysqldump -u '$mysql_user' -h '$mysql_host' '$db_name' > '$BACKUP_FILE'" 2>&1; then
         if [[ ! -s "$BACKUP_FILE" ]]; then
             log_error "Backup file is empty!"
             cleanup_failed_backup "$BACKUP_FILE"
@@ -139,24 +139,50 @@ perform_backup() {
 }
 
 restore_backup() {
-    local backup_file db_name mysql_user mysql_host temp_file=""
+    local backup_file db_name mysql_user mysql_host temp_file="" backup_dir
     
     show_config && echo ""
 
-    # Show available backups
-    if [[ -d "$DEFAULT_BACKUP_DIR" ]]; then
-        log_info "Available in $DEFAULT_BACKUP_DIR:"
-        ls -1 "$DEFAULT_BACKUP_DIR"/*.sql.gz 2>/dev/null || echo "  (none)"
-        echo ""
+    # Get backup directory
+    backup_dir=$(gum input --placeholder "Backup directory (default: $DEFAULT_BACKUP_DIR)")
+    [[ -z "$backup_dir" ]] && backup_dir="$DEFAULT_BACKUP_DIR"
+
+    if [[ ! -d "$backup_dir" ]]; then
+        log_error "Directory not found: $backup_dir"
+        read -rs; return 1
     fi
 
-    backup_file=$(gum input --placeholder "Backup file path")
-    [[ -z "$backup_file" ]] && { log_warning "No file specified."; read -rs; return; }
+    # Find backup files and let user select
+    log_info "Scanning $backup_dir for backups..."
+    mapfile -t backup_files < <(find "$backup_dir" -maxdepth 1 -type f \( -name "*.sql" -o -name "*.sql.gz" \) 2>/dev/null | sort -r)
+
+    if [[ ${#backup_files[@]} -eq 0 ]]; then
+        log_warning "No backup files found in $backup_dir"
+        read -rs; return
+    fi
+
+    # Build selection list with file info
+    local file_options=()
+    for f in "${backup_files[@]}"; do
+        local fname=$(basename "$f")
+        local fsize=$(du -h "$f" 2>/dev/null | cut -f1)
+        local fdate=$(stat -c '%y' "$f" 2>/dev/null | cut -d'.' -f1)
+        file_options+=("$fname ($fsize, $fdate)")
+    done
+
+    log_step "Select a backup file:"
+    selected=$(printf '%s\n' "${file_options[@]}" | gum choose)
+    [[ -z "$selected" ]] && { log_warning "No file selected."; read -rs; return; }
+
+    # Extract filename from selection
+    selected_name=$(echo "$selected" | sed 's/ (.*//')
+    backup_file="$backup_dir/$selected_name"
 
     if [[ ! -f "$backup_file" ]]; then
         log_error "File not found: $backup_file"
         read -rs; return 1
     fi
+    log_info "Selected: $backup_file"
 
     db_name=$(gum input --placeholder "Target database (default: $DEFAULT_DATABASE)")
     [[ -z "$db_name" ]] && db_name="$DEFAULT_DATABASE"
