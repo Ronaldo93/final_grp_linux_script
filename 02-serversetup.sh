@@ -66,6 +66,9 @@ mysql_user="lib_admin"
 mysql_password="Admin@123456"
 mysql_database="library_db"
 
+# silently start mysql
+exec sudo systemctl start mysql &>/dev/null
+
 # create database if not exists
 log "Creating database $mysql_database if not exists..."
 exec sudo mysql -u root -e "CREATE DATABASE IF NOT EXISTS $mysql_database;"
@@ -103,9 +106,6 @@ echo "[INFO] Creating MySQL user and configuring privileges..."
 exec sudo mysql -u root -e "CREATE USER IF NOT EXISTS '$mysql_user'@'localhost' IDENTIFIED BY '$mysql_password';"
 exec sudo mysql -u root -e "GRANT ALL PRIVILEGES ON $mysql_database.* TO '$mysql_user'@'localhost';"
 exec sudo mysql -u root -e "FLUSH PRIVILEGES;"
-
-# start mysql
-exec sudo systemctl start mysql
 
 echo "[INFO] MySQL user and privileges configured successfully."
 echo "[INFO] Server setup completed successfully."
