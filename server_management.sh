@@ -67,11 +67,21 @@ install_server() {
 backup_server() {
     gum style --foreground 214 --bold "Backup Server"
     echo ""
-    gum style --foreground 196 "⚠ This feature is not implemented yet."
-    gum style --foreground 240 "Planned features:"
-    gum style --foreground 240 "  - Backup MySQL databases"
-    gum style --foreground 240 "  - Backup /var/www/library files"
-    gum style --foreground 240 "  - Backup nginx configuration"
+    # gum style --foreground 196 "⚠ This feature is not implemented yet."
+    # gum style --foreground 240 "Planned features:"
+    # gum style --foreground 240 "  - Backup MySQL databases"
+    # gum style --foreground 240 "  - Backup /var/www/library files"
+    # gum style --foreground 240 "  - Backup nginx configuration"
+    # pause
+
+    # run the server backup script
+    # check if the script exists then run it, otherwise show error
+    if [[ -f "$SCRIPT_DIR/backup_mysql.sh" ]]; then
+        bash "$SCRIPT_DIR/backup_mysql.sh"
+    else
+        gum style --foreground 196 "Error: backup_mysql.sh not found"
+    fi
+
     pause
 }
 

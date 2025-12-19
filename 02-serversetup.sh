@@ -110,4 +110,16 @@ exec sudo mysql -u root -e "FLUSH PRIVILEGES;"
 echo "[INFO] MySQL user and privileges configured successfully."
 echo "[INFO] Server setup completed successfully."
 
-# TODO: validate status of the php page via central management script later
+# set systemctl to auto start mysql and nginx
+echo "[INFO] Enabling MySQL and Nginx to start on boot..."
+# exec sudo systemctl enable mysql &>/dev/null
+# exec sudo systemctl enable nginx &>/dev/null
+enable_mysql=$(sudo systemctl enable mysql &>/dev/null)
+enable_nginx=$(sudo systemctl enable nginx &>/dev/null)
+
+# show success if both return 0
+if [[ enable_mysql == 0 && enable_nginx == 0 ]]; then
+  echo "[INFO] MySQL and Nginx enabled successfully."
+else
+  echo "[ERROR] Failed to enable MySQL and Nginx. Please try to manually enable and run this script again."
+fi
