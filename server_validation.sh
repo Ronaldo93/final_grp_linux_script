@@ -29,9 +29,9 @@ execute_check() {
   local label=$1
   local -n script=$2
   if gum spin --spinner line --title "Checking $label" -- bash -c "$script"; then
-    results+=("✅ $label")
+    results+=("[PASS] $label")
   else
-    results+=("❌ $label")
+    results+=("[FAIL] $label")
     failed=1
   fi
 }
